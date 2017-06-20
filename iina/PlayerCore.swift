@@ -646,6 +646,10 @@ class PlayerCore: NSObject {
         if let thumbnails = ThumbnailCache.read(forName: cacheName) {
           self.info.thumbnails = thumbnails
           self.info.thumbnailsReady = true
+          
+          if let cell = self.mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
+            cell.replaceImages(thumbnails)
+          }
         }
       }
     } else {
@@ -1191,13 +1195,26 @@ class PlayerCore: NSObject {
 extension PlayerCore: FFmpegControllerDelegate {
 
   func didUpdatedThumbnails(_ thumbnails: [FFThumbnail]?, withProgress progress: Int) {
-
+    guard let thumbnails = thumbnails, let cell = mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell else {
+      return
+    }
+    
+    if info.thumbnailsReady {
+      return
+    }
+    
+    cell.updateImages(thumbnails)
   }
 
   func didGeneratedThumbnails(_ thumbnails: [FFThumbnail], succeeded: Bool) {
     if succeeded {
       info.thumbnailsReady = true
       info.thumbnails = thumbnails
+      
+      if let cell = mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
+        cell.replaceImages(thumbnails)
+      }
+      
       if let cacheName = info.mpvMd5 {
         backgroundQueue.async {
           ThumbnailCache.write(self.info.thumbnails, forName: cacheName)

@@ -333,7 +333,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
 
     w.center()
 
-    w.styleMask.insert(NSFullSizeContentViewWindowMask)
+    w.styleMask.insert(NSWindow.StyleMask.fullSizeContentView)
     w.titlebarAppearsTransparent = true
 
     // need to deal with control bar, so handle it manually
