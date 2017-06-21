@@ -647,8 +647,14 @@ class PlayerCore: NSObject {
           self.info.thumbnails = thumbnails
           self.info.thumbnailsReady = true
           
-          if let cell = self.mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
-            cell.replaceImages(thumbnails)
+          DispatchQueue.main.async {
+            if let cell = self.mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
+              if cell.timeInterval == nil {
+                cell.timeInterval = CGFloat(self.info.videoDuration!.second) / CGFloat(cell.imageNumber)
+              }
+              
+              cell.replaceImages(thumbnails)
+            }
           }
         }
       }
@@ -1191,11 +1197,10 @@ class PlayerCore: NSObject {
 
 }
 
-
 extension PlayerCore: FFmpegControllerDelegate {
 
   func didUpdatedThumbnails(_ thumbnails: [FFThumbnail]?, withProgress progress: Int) {
-    guard let thumbnails = thumbnails, let cell = mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell else {
+    guard let thumbnails = thumbnails else {
       return
     }
     
@@ -1203,7 +1208,15 @@ extension PlayerCore: FFmpegControllerDelegate {
       return
     }
     
-    cell.updateImages(thumbnails)
+    DispatchQueue.main.async {
+      if let cell = self.mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
+        if cell.timeInterval == nil {
+          cell.timeInterval = CGFloat(self.info.videoDuration!.second) / CGFloat(cell.imageNumber)
+        }
+        
+        cell.updateImages(thumbnails)
+      }
+    }
   }
 
   func didGeneratedThumbnails(_ thumbnails: [FFThumbnail], succeeded: Bool) {
@@ -1211,8 +1224,14 @@ extension PlayerCore: FFmpegControllerDelegate {
       info.thumbnailsReady = true
       info.thumbnails = thumbnails
       
-      if let cell = mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
-        cell.replaceImages(thumbnails)
+      DispatchQueue.main.async {
+        if let cell = self.mainWindow?.touchBarPlaySlider?.cell as? TouchBarPlaySliderCell {
+          if cell.timeInterval == nil {
+            cell.timeInterval = CGFloat(self.info.videoDuration!.second) / CGFloat(cell.imageNumber)
+          }
+          
+          cell.replaceImages(thumbnails)
+        }
       }
       
       if let cacheName = info.mpvMd5 {

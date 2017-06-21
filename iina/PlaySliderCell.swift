@@ -91,6 +91,7 @@ class PlaySliderCell: NSSliderCell {
     let path = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
 
     // draw left
+    NSGraphicsContext.saveGraphicsState()
     let pathLeftRect : NSRect = NSMakeRect(rect.origin.x, rect.origin.y, progress, rect.height)
     NSBezierPath(rect: pathLeftRect).addClip();
     

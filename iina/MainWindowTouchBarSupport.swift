@@ -80,7 +80,7 @@ extension MainWindowController: NSTouchBarDelegate {
       item.slider.maxValue = 100
       item.slider.target = self
       item.slider.action = #selector(self.touchBarSliderAction(_:))
-      item.slider.widthAnchor.constraint(greaterThanOrEqualToConstant: 299).isActive = true
+      item.slider.widthAnchor.constraint(equalToConstant: 449).isActive = true
       item.customizationLabel = "Seek"
       self.touchBarPlaySlider = item.slider as? TouchBarPlaySlider
       return item
@@ -215,14 +215,19 @@ class TouchBarPlaySlider: NSSlider {
 
 class TouchBarPlaySliderCell: NSSliderCell {
   
-  var thumbWidth: CGFloat?
-  var step: CGFloat?
+  var imageNumber: Int = 120
+  var timeInterval: CGFloat?
+  
+  let thumbWidth: CGFloat = 2
+  var step: CGFloat = 3
+  
   let images: NSMutableArray = []
+  var barImage: NSImage?
   var loaded = 0
+  var loadedTime: CGFloat = 0.0
+  var needUpdate = true
   let lock = NSLock()
   
-  private let gradient = NSGradient(starting: NSColor(calibratedRed: 0.471, green: 0.8, blue: 0.929, alpha: 1),
-                            ending: NSColor(calibratedRed: 0.784, green: 0.471, blue: 0.929, alpha: 1))
   private let solidColor = NSColor.labelColor.withAlphaComponent(0.4)
   
   var isTouching: Bool {
@@ -232,9 +237,8 @@ class TouchBarPlaySliderCell: NSSliderCell {
   func updateImages(_ thumbnails: [FFThumbnail]) {
     for thumbnail in thumbnails {
       if let image = thumbnail.image {
-        let imageHeight = self.controlView!.frame.height - 2
+        let imageHeight = self.controlView!.frame.height
         let imageWidth = ceil(image.size.width * (imageHeight / image.size.height))
-        print("Image Height:", imageHeight, " Image Width:", imageWidth)
         var imageRect = NSRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
         
         let imageRef = image.cgImage(forProposedRect: &imageRect,
@@ -242,16 +246,20 @@ class TouchBarPlaySliderCell: NSSliderCell {
                                      hints: nil)
         
         let imageForTouchBar = NSImage(cgImage: imageRef!, size: imageRect.size)
+        let time = CGFloat(thumbnail.realTime)
         
         lock.lock()
-        images.add(imageForTouchBar)
+        while loadedTime <= time && loaded <= imageNumber {
+          images.add(imageForTouchBar)
+          loadedTime += timeInterval!
+          loaded += 1
+        }
         lock.unlock()
-        
-        loaded += 1
       }
     }
     
-    print("Loaded: ", loaded)
+    print("Update Loaded: ", loaded)
+    self.needUpdate = true
   }
   
   func replaceImages(_ thumbnails: [FFThumbnail], force: Bool = false) {
@@ -261,35 +269,17 @@ class TouchBarPlaySliderCell: NSSliderCell {
     
     lock.lock()
     images.removeAllObjects()
-    lock.unlock()
     loaded = 0
+    loadedTime = 0
+    lock.unlock()
     
-    for thumbnail in thumbnails {
-      if let image = thumbnail.image {
-        let imageHeight = self.controlView!.frame.height
-        let imageWidth = ceil(image.size.width * (imageHeight / image.size.height))
-        print("Image Height:", imageHeight, " Image Width:", imageWidth)
-        var imageRect = NSRect(x: 0, y: 0, width: imageWidth, height: imageHeight)
-        
-        let imageRef = image.cgImage(forProposedRect: &imageRect,
-                                     context: nil,
-                                     hints: nil)
-        
-        let imageForTouchBar = NSImage(cgImage: imageRef!, size: imageRect.size)
-        
-        lock.lock()
-        images.add(imageForTouchBar)
-        lock.unlock()
-        
-        loaded += 1
-      }
-    }
+    updateImages(thumbnails)
     
-    print("Loaded: ", loaded)
+    print("Replace Loaded: ", loaded)
   }
 
   override var knobThickness: CGFloat {
-    return step ?? 4
+    return step
   }
 
   override func barRect(flipped: Bool) -> NSRect {
@@ -302,11 +292,10 @@ class TouchBarPlaySliderCell: NSSliderCell {
   }
 
   override func knobRect(flipped: Bool) -> NSRect {
-    
     let superKnob = super.knobRect(flipped: flipped)
     
     if isTouching {
-      let i = Int(superKnob.midX / step!)
+      let i = Int(superKnob.midX / step)
       
       if loaded >= i {
         let image = images.firstObject as! NSImage
@@ -332,15 +321,23 @@ class TouchBarPlaySliderCell: NSSliderCell {
   }
   
   override func drawKnob(_ knobRect: NSRect) {
-    guard let step = step else {
-      return
-    }
-    
     let i = Int(knobRect.midX / step)
     
     if loaded >= i && isTouching {
       if let image = images[i] as? NSImage {
-        image.draw(in: knobRect)
+        let imageRect = NSRect(x: 0, y: 0, width: knobRect.width, height: knobRect.height)
+        let knobImage = NSImage(size: imageRect.size)
+        knobImage.lockFocus()
+        image.draw(at: NSPoint(x: 2, y: 2),
+                   from: NSRect(x: 2, y: 2, width: imageRect.width - 4, height: imageRect.height - 4),
+                   operation: .copy,
+                   fraction: 1)
+        NSColor.labelColor.setStroke()
+        let path = NSBezierPath(roundedRect: NSRect(x: 1, y: 1, width: knobRect.width - 2, height: knobRect.height - 2), xRadius: 2, yRadius: 2)
+        path.lineWidth = 2
+        path.stroke()
+        knobImage.unlockFocus()
+        knobImage.draw(in: knobRect)
       }
     } else {
       NSColor.labelColor.setFill()
@@ -351,20 +348,30 @@ class TouchBarPlaySliderCell: NSSliderCell {
 
   override func drawBar(inside rect: NSRect, flipped: Bool) {
     let barRect = self.barRect(flipped: flipped)
+    
+    if self.barImage == nil {
+      self.barImage = NSImage(size: barRect.size)
+    }
+    
+    let barImage = self.barImage!
+    
     NSGraphicsContext.saveGraphicsState()
     NSBezierPath(rect: barRect).setClip()
     
-    if self.thumbWidth == nil && self.step == nil {
-      self.thumbWidth = floor(barRect.width * 2 / 299)
-      self.step = ceil(self.thumbWidth! * 3 / 2)
-    }
-    
-    if let imageWidth = self.thumbWidth, let step = self.step {
-      var i: CGFloat = barRect.origin.x
+    if self.needUpdate {
+      var i: CGFloat = 0.0
       var sum = 0
       
+      barImage.lockFocus()
+      NSColor.black.setFill()
+      NSBezierPath(rect: NSZeroRect).fill()
+      
+      if self.timeInterval == nil {
+        return
+      }
+      
       while (sum < loaded) {
-        let originalRect = NSRect(x: 0, y: 0, width: imageWidth, height: barRect.height)
+        let originalRect = NSRect(x: 0, y: 0, width: thumbWidth, height: barRect.height)
         let startPoint = NSPoint(x: i, y: barRect.origin.y)
         let thumbnail = images[sum] as! NSImage
         
@@ -372,17 +379,21 @@ class TouchBarPlaySliderCell: NSSliderCell {
         i += step
         sum += 1
       }
-      
-      while (sum < 100) {
-        let rect = NSRect(x: i, y: barRect.origin.y, width: imageWidth, height: barRect.height)
+      print(barRect)
+      while (sum < imageNumber) {
+        let rect = NSRect(x: i, y: barRect.origin.y, width: thumbWidth, height: barRect.height)
         solidColor.setFill()
         NSBezierPath(rect: rect).fill()
         i += step
         sum += 1
       }
-      
-      NSGraphicsContext.restoreGraphicsState()
+      barImage.unlockFocus()
+      self.needUpdate = false
     }
+    
+    barImage.draw(in: barRect)
+    
+    NSGraphicsContext.restoreGraphicsState()
   }
 
 }
