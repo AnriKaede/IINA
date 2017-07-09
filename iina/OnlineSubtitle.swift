@@ -96,6 +96,15 @@ class OnlineSubtitle: NSObject {
         subSupport.showSubSelectWindow(subs: subs)
       }.then { selectedSubs -> Void in
         callback(selectedSubs)
+      }.recover { error -> [OpenSubSubtitle] in
+        guard let err = error as? OpenSubSupport.OpenSubError, case .noSubFound = err else { throw error }
+        subSupport.requestIMDB(url)
+      }.then { IMDB in
+        subSupport.request(IMDB)
+      }.then { subs in
+        subSupport.showSubSelectWindow(subs: subs)
+      }.then { selectedSubs -> Void in
+        callback(selectedSubs)
       }.catch { err in
         let osdMessage: OSDMessage
         switch err {

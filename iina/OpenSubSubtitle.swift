@@ -69,6 +69,7 @@ class OpenSubSupport {
     // lower level error
     case wrongResponseFormat
     case xmlRpcError(JustXMLRPC.XMLRPCError)
+    case noSubFound
   }
 
   struct FileInfo {
@@ -234,7 +235,47 @@ class OpenSubSupport {
                                       zipDlLink: subData["ZipDownloadLink"] as! String)
             result.append(sub)
           }
+          if result.count == 0 {
+            reject(OpenSubError.noSubFound)
+          }
           fulfill(result)
+        case .failure(_):
+          // Failure
+          reject(OpenSubError.searchFailed("Failure"))
+        case .error(let error):
+          // Error
+          reject(OpenSubError.xmlRpcError(error))
+        }
+      }
+    }
+  }
+
+  func requestIMDB(_ fileURL: URL) -> Promise<String> {
+    return Promise { fulfill, reject in
+      let fileName = fileURL.lastPathComponent
+      xmlRpc.call("GuessMovieFromString", [token, [fileName]]) { status in
+        switch status {
+        case .ok(let response):
+          // OK
+          guard let parsed = (response as? [String: Any]) else {
+            reject(OpenSubError.wrongResponseFormat)
+            return
+          }
+          // check status
+          let pStatus = parsed["status"] as! String
+          guard pStatus.hasPrefix("200") else {
+            reject(OpenSubError.searchFailed(pStatus))
+            return
+          }
+          // get data
+          guard let pData = (parsed["data"] as? [String: Any]) else {
+            reject(OpenSubError.wrongResponseFormat)
+            return
+          }
+          guard let data1 = pData[fileName] as? [String: Any] else { reject(OpenSubError.wrongResponseFormat); return }
+          guard let data2 = data1["BestGuess"] as? [String: Any] else { reject(OpenSubError.wrongResponseFormat); return }
+          guard let IMDB = data2["IDMovieIMDB"] as? String else { reject(OpenSubError.wrongResponseFormat); return }
+          fulfill(IMDB)
         case .failure(_):
           // Failure
           reject(OpenSubError.searchFailed("Failure"))
