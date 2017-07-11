@@ -52,6 +52,9 @@ class PlaybackInfo {
   var isPaused: Bool = false {
     didSet {
       PlayerCore.checkStatusForSleep()
+      if #available(macOS 10.12.2, *) {
+        NowPlayingInfoManager.updateState(isPaused ? .paused : .playing)
+      }
     }
   }
 
