@@ -94,16 +94,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     if #available(macOS 10.12.2, *) {
       NSApp.isAutomaticCustomizeTouchBarMenuItemEnabled = false
       NSWindow.allowsAutomaticWindowTabbing = false
+    }
 
-      let remoteCommand = MPRemoteCommandCenter.shared()
-      remoteCommand.playCommand.addTarget(handler: PlayerCore.handlePlayCommand(_:))
-      remoteCommand.pauseCommand.addTarget(handler: PlayerCore.handlePauseCommand(_:))
-      remoteCommand.togglePlayPauseCommand.addTarget(handler: PlayerCore.handleTogglePlayPauseCommand(_:))
-      remoteCommand.stopCommand.addTarget(handler: PlayerCore.handleStopCommand(_:))
-      remoteCommand.nextTrackCommand.addTarget(handler: PlayerCore.handleNextTrackCommand(_:))
-      remoteCommand.previousTrackCommand.addTarget(handler: PlayerCore.handlePreviousTrackCommand(_:))
-
-      NowPlayingInfoManager.updateState(.unknown)
+    if #available(macOS 10.13, *) {
+      RemoteCommandController.useSystemMediaControl = Preference.bool(for: .useMediaKeys)
+      if RemoteCommandController.useSystemMediaControl {
+        RemoteCommandController.setup()
+        NowPlayingInfoManager.updateState(.unknown)
+      }
     }
 
     // if have pending open request
@@ -327,4 +325,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     Utility.setSelfAsDefaultForAllFileTypes()
   }
 
+}
+
+
+@available(OSX 10.13, *)
+class RemoteCommandController {
+  static let remoteCommand = MPRemoteCommandCenter.shared()
+
+  static var useSystemMediaControl: Bool = false
+
+  static func setup() {
+    remoteCommand.playCommand.addTarget(handler: PlayerCore.handlePlayCommand(_:))
+    remoteCommand.pauseCommand.addTarget(handler: PlayerCore.handlePauseCommand(_:))
+    remoteCommand.togglePlayPauseCommand.addTarget(handler: PlayerCore.handleTogglePlayPauseCommand(_:))
+    remoteCommand.stopCommand.addTarget(handler: PlayerCore.handleStopCommand(_:))
+    remoteCommand.nextTrackCommand.addTarget(handler: PlayerCore.handleNextTrackCommand(_:))
+    remoteCommand.previousTrackCommand.addTarget(handler: PlayerCore.handlePreviousTrackCommand(_:))
+  }
 }

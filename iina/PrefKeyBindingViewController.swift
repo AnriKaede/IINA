@@ -61,7 +61,7 @@ class PrefKeyBindingViewController: NSViewController, MASPreferencesViewControll
   @IBOutlet weak var deleteConfFileBtn: NSButton!
   @IBOutlet weak var newConfigBtn: NSButton!
   @IBOutlet weak var duplicateConfigBtn: NSButton!
-
+  @IBOutlet weak var useMediaKeysButton: NSButton!
 
 
   override func viewDidLoad() {
@@ -71,6 +71,10 @@ class PrefKeyBindingViewController: NSViewController, MASPreferencesViewControll
     kbTableView.dataSource = self
     kbTableView.delegate = self
     kbTableView.doubleAction = #selector(editRow)
+
+    if #available(macOS 10.13, *) {
+      useMediaKeysButton.title = "Use system media control"
+    }
 
     // config files
     // - default
