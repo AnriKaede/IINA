@@ -104,6 +104,12 @@ class KeyBindingTranslator {
           }
         }
       }
+      // add translation for screenshot
+      if data["command"] == "screenshot" {
+        data.removeValue(forKey: "command")
+        let option = (data.first!.key as NSString).substring(from: 11)
+        data["option"] = l10nDic["screenshot." + option]
+      }
       // render
       if let rendered = try? tmpl.render(data) {
         return rendered

@@ -28,7 +28,7 @@
 "cmd.stop" = "Stop";
 "cmd.quit" = "Quit";
 "cmd.quit-watch-later" = "Quit (save progress)";
-"cmd.screenshot" = "Screenshot";
+"cmd.screenshot" = "Take screenshot";
 "cmd.screenshot-to-file" = "Screenshot to file";
 "cmd.loadfile" = "Load file";
 "cmd.loadlist" = "Load playlist";
@@ -51,6 +51,11 @@
 "iina.delete-current-file" = "Delete current file";
 "iina.find-online-subs" = "Find online subtitles";
 "iina.save-downloaded-sub" = "Save downloaded subtitle";
+
+"screenshot." = "with subtitiles";
+"screenshot.video" = "without subtitles";
+"screenshot.window" = "with scale and subtitles";
+"screenshot.each-frame" = "Every frame";
 
 "yes" = "Yes";
 "no" = "No";
@@ -108,3 +113,4 @@
 "read.cycle-values" = "Cycle {{property}} in ({{{values}}})";
 "read.seek" = "Seek {{#fwd}}forward{{/fwd}}{{#bwd}}backward{{/bwd}}{{#abs}}to{{/abs}} {{value}}{{#sec}}s{{/sec}}{{#per}}%{{/per}} {{#exact}}(exact){{/exact}}{{#kf}}(keyframe){{/kf}}";
 "read.sub-seek" = "Seek to {{#skip_1}}next{{/skip_1}}{{#skip_-1}}previous{{/skip_-1}} subtitle";
+"read.screenshot" = "Take screenshot {{option}}";

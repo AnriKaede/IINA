@@ -38,6 +38,7 @@
 
 
 "seek" = "command value opt:relative|absolute|absolute-percent|relative-percent|exact|keyframes";
+"screenshot" = "command screenshot:|video|window|each-frame";
 "set" = "command property value";
 "add" = "command property value#+1";
 "cycle" = "command property dir:up|down";

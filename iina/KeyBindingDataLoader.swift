@@ -42,6 +42,8 @@ class KeyBindingDataLoader {
     KBI("add", type: .label, children: propertiesForAdd()),
     KBI("multiply", type: .label, children: propertiesForMultiply()),
     KBI.separator(),
+    KBI("screenshot", type: .label, children: propertiesForScreenshot()),
+    KBI.separator(),
     KBI("playlist-next"),
     KBI("playlist-prev"),
     KBI("playlist-clear"),
@@ -169,6 +171,14 @@ class KeyBindingDataLoader {
       kbi.l10nKey = "opt"
       return kbi
     }
+  }
+
+  static private func propertiesForScreenshot() -> [KeyBindingItem] {
+    let list = KBI.chooseIn("|video|window|each-frame")
+    for keyBinding in list {
+      keyBinding.l10nKey = "screenshot"
+    }
+    return list
   }
 
   static func load() -> [Criterion] {
