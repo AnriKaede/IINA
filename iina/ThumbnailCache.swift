@@ -12,7 +12,11 @@ class ThumbnailCache {
 
   static private let sizeofDouble = MemoryLayout<Double>.size
   static private let sizeofInt64 = MemoryLayout<Int64>.size
+  static private let sizeofUInt64 = MemoryLayout<UInt64>.size
+  
+  static private let sizeofMetadata = sizeofInt64 + sizeofUInt64 + sizeofInt64
 
+  
   static private let imageProperties: [NSBitmapImageRep.PropertyKey: Any] = [
     .compressionFactor: 0.75
   ]
@@ -20,10 +24,46 @@ class ThumbnailCache {
   static func fileExists(forName name: String) -> Bool {
     return FileManager.default.fileExists(atPath: urlFor(name).path)
   }
+  
+  static func fileHasCache(forName name: String, forVideo videoPath: URL?) -> Bool {
+    guard let fileAttr = try? FileManager.default.attributesOfItem(atPath: videoPath!.path) else {
+      Utility.log("Cannot get video file attributes")
+      return false
+    }
+    
+    // file size
+    guard let fileSize = fileAttr[.size] as? UInt64 else {
+      Utility.log("Cannot get video file size")
+      return false
+    }
+    
+    // modified date
+    guard let fileModifiedDate = fileAttr[.modificationDate] as? Date else {
+      Utility.log("Cannot get video file modification date")
+      return false
+    }
+    let fileTimestamp = Int64(fileModifiedDate.timeIntervalSince1970)
+    
+    // Check metadate in the cache
+    if self.fileExists(forName: name) {
+      guard let file = try? FileHandle(forReadingFrom: urlFor(name)) else {
+        Utility.log("Cannot open cache file.")
+        return false
+      }
+      
+      // skip version
+      file.seek(toFileOffset: UInt64(sizeofInt64))
+      
+      return file.readData(ofLength: sizeofUInt64).withUnsafeBytes { $0.pointee } == fileSize &&
+             file.readData(ofLength: sizeofInt64).withUnsafeBytes { $0.pointee } == fileTimestamp
+    }
+    
+    return false
+  }
 
   /// Write thumbnail cache to file. 
   /// This method is expected to be called when the file doesn't exist.
-  static func write(_ thumbnails: [FFThumbnail], forName name: String) {
+  static func write(_ thumbnails: [FFThumbnail], forName name: String, forVideo videoPath: URL?) {
     // Utility.log("Writing thumbnail cache...")
 
     let maxCacheSize = Preference.integer(for: .maxThumbnailPreviewCacheSize) * FileSize.Unit.mb.rawValue
@@ -47,6 +87,28 @@ class ThumbnailCache {
     var version = Int64(1)
     let versionData = Data(bytes: &version, count: sizeofInt64)
     file.write(versionData)
+    
+    guard let fileAttr = try? FileManager.default.attributesOfItem(atPath: videoPath!.path) else {
+      Utility.log("Cannot get video file attributes")
+      return
+    }
+    
+    // file size
+    guard var fileSize = fileAttr[.size] as? UInt64 else {
+      Utility.log("Cannot get video file size")
+      return
+    }
+    let fileSizeData = Data(bytes: &fileSize, count: sizeofUInt64)
+    file.write(fileSizeData)
+    
+    // modified date
+    guard let fileModifiedDate = fileAttr[.modificationDate] as? Date else {
+      Utility.log("Cannot get video file modification date")
+      return
+    }
+    var fileTimestamp = Int64(fileModifiedDate.timeIntervalSince1970)
+    let fileModificationDateData = Data(bytes: &fileTimestamp, count: sizeofInt64)
+    file.write(fileModificationDateData)
 
     // data blocks
     for tb in thumbnails {
@@ -86,10 +148,9 @@ class ThumbnailCache {
     // get file length
     file.seekToEndOfFile()
     let eof = file.offsetInFile
-    file.seek(toFileOffset: 0)
 
-    // version
-    let _ = file.readData(ofLength: sizeofInt64)
+    // skip metadata
+    file.seek(toFileOffset: UInt64(sizeofMetadata))
 
     // data blocks
     while file.offsetInFile != eof {

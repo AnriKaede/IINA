@@ -1029,7 +1029,7 @@ class PlayerCore: NSObject {
     info.thumbnailsProgress = 0
     info.thumbnailsReady = false
     if Preference.bool(for: .enableThumbnailPreview) {
-      if let cacheName = info.mpvMd5, ThumbnailCache.fileExists(forName: cacheName) {
+      if let cacheName = info.mpvMd5, ThumbnailCache.fileHasCache(forName: cacheName, forVideo: info.currentURL) {
         thumbnailQueue.async {
           if let thumbnails = ThumbnailCache.read(forName: cacheName) {
             self.info.thumbnails = thumbnails
@@ -1260,7 +1260,7 @@ extension PlayerCore: FFmpegControllerDelegate {
       }
       if let cacheName = info.mpvMd5 {
         backgroundQueue.async {
-          ThumbnailCache.write(self.info.thumbnails, forName: cacheName)
+          ThumbnailCache.write(self.info.thumbnails, forName: cacheName, forVideo: self.info.currentURL)
         }
       }
     }
