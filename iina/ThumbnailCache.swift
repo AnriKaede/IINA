@@ -9,10 +9,12 @@
 import Cocoa
 
 class ThumbnailCache {
+  static private var version = 2
 
   static private let sizeofDouble = MemoryLayout<Double>.size
   static private let sizeofInt64 = MemoryLayout<Int64>.size
   static private let sizeofUInt64 = MemoryLayout<UInt64>.size
+  static private let sizeofUInt8 = MemoryLayout<UInt8>.size
   
   static private let sizeofMetadata = sizeofInt64 + sizeofUInt64 + sizeofInt64
 
@@ -51,8 +53,8 @@ class ThumbnailCache {
         return false
       }
       
-      // skip version
-      file.seek(toFileOffset: UInt64(sizeofInt64))
+      let cacheVersion: Int = file.readData(ofLength: sizeofUInt8).withUnsafeBytes { $0.pointee }
+      if cacheVersion != version { return false }
       
       return file.readData(ofLength: sizeofUInt64).withUnsafeBytes { $0.pointee } == fileSize &&
              file.readData(ofLength: sizeofInt64).withUnsafeBytes { $0.pointee } == fileTimestamp
@@ -84,8 +86,7 @@ class ThumbnailCache {
     }
 
     // version
-    var version = Int64(1)
-    let versionData = Data(bytes: &version, count: sizeofInt64)
+    let versionData = Data(bytes: &version, count: sizeofUInt8)
     file.write(versionData)
     
     guard let fileAttr = try? FileManager.default.attributesOfItem(atPath: videoPath!.path) else {
